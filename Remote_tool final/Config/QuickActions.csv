@@ -1,0 +1,6 @@
+Name,DisplayName,Description,ScriptPath,ButtonColor,RequiresInput
+"GPReport","Generate GPO Report","Exports Group Policy results to HTML","Scripts\Get-GPReport.ps1","#4A90E2","false"
+"InstalledUpdates","Get Updates","Shows recent Windows updates","Scripts\Get-InstalledUpdates.ps1","#2ECC71","false"
+"ForceGPUpdate","Force GP Update","Runs gpupdate /force remotely","Scripts\Force-GPUpdate.ps1","#E74C3C","true"
+"ClearCache","Clear Teams/Outlook","Cleans application caches","Scripts\Clear-AppCache.ps1","#F39C12","true"
+"GetProcesses","Remote Processes","Shows processes by CPU/Memory","Scripts\Get-RemoteProcesses.ps1","#9B59B6","false"

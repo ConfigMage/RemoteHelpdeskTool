@@ -1,0 +1,92 @@
+[
+  {
+    "id": "1",
+    "name": "Check Service Status",
+    "description": "Gets status of any Windows service",
+    "category": "Services",
+    "content": "$serviceName = Read-Host 'Enter service name'\nGet-Service -Name $serviceName -ComputerName $computerName | Select-Object Name, Status, StartType, DisplayName",
+    "author": "Admin",
+    "dateAdded": "2024-01-01"
+  },
+  {
+    "id": "2",
+    "name": "Get Event Log Errors",
+    "description": "Retrieves last 50 error events from System log",
+    "category": "Diagnostics",
+    "content": "Get-EventLog -LogName System -EntryType Error -Newest 50 -ComputerName $computerName | \n    Select-Object TimeGenerated, Source, EventID, Message | \n    Out-GridView -Title \"System Error Events\"",
+    "author": "Admin",
+    "dateAdded": "2024-01-01"
+  },
+  {
+    "id": "3",
+    "name": "Get Disk Space",
+    "description": "Shows disk space usage for all drives",
+    "category": "Storage",
+    "content": "Get-WmiObject Win32_LogicalDisk -ComputerName $computerName -Filter \"DriveType=3\" | \n    Select-Object DeviceID, \n        @{Name=\"Size(GB)\";Expression={[math]::Round($_.Size/1GB,2)}},\n        @{Name=\"FreeSpace(GB)\";Expression={[math]::Round($_.FreeSpace/1GB,2)}},\n        @{Name=\"PercentFree\";Expression={[math]::Round(($_.FreeSpace/$_.Size)*100,2)}} |\n    Format-Table -AutoSize",
+    "author": "Admin",
+    "dateAdded": "2024-01-01"
+  },
+  {
+    "id": "4",
+    "name": "Get Network Configuration",
+    "description": "Displays network adapter configuration",
+    "category": "Network",
+    "content": "Get-WmiObject Win32_NetworkAdapterConfiguration -ComputerName $computerName -Filter \"IPEnabled=True\" | \n    Select-Object Description, IPAddress, IPSubnet, DefaultIPGateway, DNSServerSearchOrder, MACAddress |\n    Format-List",
+    "author": "Admin",
+    "dateAdded": "2024-01-01"
+  },
+  {
+    "id": "5",
+    "name": "Restart Service",
+    "description": "Restarts a specified Windows service",
+    "category": "Services",
+    "content": "$serviceName = Read-Host 'Enter service name to restart'\n$service = Get-Service -Name $serviceName -ComputerName $computerName -ErrorAction SilentlyContinue\nif ($service) {\n    $confirmation = [System.Windows.Forms.MessageBox]::Show(\n        \"Are you sure you want to restart the service '$serviceName'?\",\n        \"Confirm Service Restart\",\n        [System.Windows.Forms.MessageBoxButtons]::YesNo,\n        [System.Windows.Forms.MessageBoxIcon]::Warning\n    )\n    if ($confirmation -eq 'Yes') {\n        Restart-Service -Name $serviceName -Force\n        Write-Host \"Service '$serviceName' has been restarted successfully.\" -ForegroundColor Green\n    }\n} else {\n    Write-Warning \"Service '$serviceName' not found on $computerName\"\n}",
+    "author": "Admin",
+    "dateAdded": "2024-01-01"
+  },
+  {
+    "id": "6",
+    "name": "Get System Information",
+    "description": "Retrieves comprehensive system information",
+    "category": "Diagnostics",
+    "content": "$os = Get-WmiObject Win32_OperatingSystem -ComputerName $computerName\n$cs = Get-WmiObject Win32_ComputerSystem -ComputerName $computerName\n$cpu = Get-WmiObject Win32_Processor -ComputerName $computerName | Select-Object -First 1\n$memory = Get-WmiObject Win32_PhysicalMemory -ComputerName $computerName | Measure-Object -Property Capacity -Sum\n\n@{\n    ComputerName = $cs.Name\n    Domain = $cs.Domain\n    OS = $os.Caption\n    OSVersion = $os.Version\n    LastBoot = $os.ConvertToDateTime($os.LastBootUpTime)\n    TotalMemoryGB = [Math]::Round($memory.Sum / 1GB, 2)\n    FreeMemoryGB = [Math]::Round($os.FreePhysicalMemory / 1MB, 2)\n    CPU = $cpu.Name\n    CPUCores = $cpu.NumberOfCores\n} | Format-List",
+    "author": "Admin",
+    "dateAdded": "2024-01-01"
+  },
+  {
+    "id": "7",
+    "name": "Clear DNS Cache",
+    "description": "Clears the DNS resolver cache",
+    "category": "Network",
+    "content": "Invoke-Command -ComputerName $computerName -Credential $credential -ScriptBlock {\n    ipconfig /flushdns\n    Write-Host \"DNS cache cleared successfully\" -ForegroundColor Green\n}",
+    "author": "Admin",
+    "dateAdded": "2024-01-01"
+  },
+  {
+    "id": "8",
+    "name": "Get Installed Programs",
+    "description": "Lists all installed programs",
+    "category": "Software",
+    "content": "Get-WmiObject Win32_Product -ComputerName $computerName | \n    Select-Object Name, Version, Vendor, InstallDate | \n    Sort-Object Name | \n    Out-GridView -Title \"Installed Programs on $computerName\"",
+    "author": "Admin",
+    "dateAdded": "2024-01-01"
+  },
+  {
+    "id": "9",
+    "name": "Check Port Connectivity",
+    "description": "Tests network connectivity to a specific port",
+    "category": "Network",
+    "content": "$targetHost = Read-Host 'Enter target hostname or IP'\n$port = Read-Host 'Enter port number'\n\ntry {\n    $result = Test-NetConnection -ComputerName $targetHost -Port $port -InformationLevel Detailed\n    if ($result.TcpTestSucceeded) {\n        Write-Host \"Connection to $targetHost`:$port successful\" -ForegroundColor Green\n    } else {\n        Write-Host \"Connection to $targetHost`:$port failed\" -ForegroundColor Red\n    }\n    $result | Format-List\n} catch {\n    Write-Error \"Failed to test connection: $_\"\n}",
+    "author": "Admin",
+    "dateAdded": "2024-01-01"
+  },
+  {
+    "id": "10",
+    "name": "Get Windows Updates History",
+    "description": "Shows Windows Update installation history",
+    "category": "Updates",
+    "content": "$session = New-Object -ComObject Microsoft.Update.Session\n$searcher = $session.CreateUpdateSearcher()\n$historyCount = $searcher.GetTotalHistoryCount()\n$history = $searcher.QueryHistory(0, $historyCount) | \n    Select-Object Title, Date, @{Name=\"Result\";Expression={switch($_.ResultCode){1{\"In Progress\"};2{\"Succeeded\"};3{\"Succeeded With Errors\"};4{\"Failed\"};5{\"Aborted\"}}}}, Description |\n    Sort-Object Date -Descending |\n    Select-Object -First 50\n\n$history | Out-GridView -Title \"Windows Update History\"",
+    "author": "Admin",
+    "dateAdded": "2024-01-01"
+  }
+]
