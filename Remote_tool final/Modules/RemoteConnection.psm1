@@ -248,56 +248,79 @@ function Invoke-RemoteCommand {
     param(
         [Parameter(Mandatory = $true)]
         [string]$ComputerName,
-        
+
         [Parameter(Mandatory = $true)]
         [scriptblock]$ScriptBlock,
-        
+
         [Parameter()]
-        [hashtable]$ArgumentList = @{},
-        
+        [object]$ArgumentList = $null,
+
         [Parameter()]
         [System.Management.Automation.PSCredential]$Credential
     )
-    
+
     try {
         # Use cached credentials if not provided
         if ($null -eq $Credential) {
             $Credential = Get-RemoteCredential
         }
-        
+
         # Test connection first
         $connectionTest = Test-RemoteConnection -ComputerName $ComputerName
         if (!$connectionTest.IsOnline) {
             throw "Computer $ComputerName is not reachable"
         }
-        
+
         # Create session
         $sessionParams = @{
             ComputerName = $ComputerName
-            Credential = $Credential
-            ErrorAction = 'Stop'
+            Credential   = $Credential
+            ErrorAction  = 'Stop'
         }
-        
+
         $session = New-PSSession @sessionParams
-        
+
         try {
-            # Invoke command
-            $result = Invoke-Command -Session $session -ScriptBlock $ScriptBlock -ArgumentList $ArgumentList
+            $invocationScript = {
+                param($remoteScript, $remoteArguments)
+
+                if ($null -eq $remoteScript) {
+                    throw 'No script block supplied for remote execution.'
+                }
+
+                if ($remoteArguments -is [System.Collections.IDictionary]) {
+                    return & $remoteScript @remoteArguments
+                }
+                elseif ($null -eq $remoteArguments) {
+                    return & $remoteScript
+                }
+                elseif ($remoteArguments -is [System.Collections.IEnumerable] -and -not ($remoteArguments -is [string])) {
+                    return & $remoteScript @remoteArguments
+                }
+                else {
+                    return & $remoteScript $remoteArguments
+                }
+            }
+
+            $invokeArgs = @($ScriptBlock, $ArgumentList)
+            $result = Invoke-Command -Session $session -ScriptBlock $invocationScript -ArgumentList $invokeArgs
+
             return @{
                 Success = $true
-                Result = $result
-                Error = $null
+                Result  = $result
             }
         }
         finally {
-            Remove-PSSession -Session $session -ErrorAction SilentlyContinue
+            if ($session) {
+                Remove-PSSession -Session $session -ErrorAction SilentlyContinue
+            }
         }
     }
     catch {
         return @{
             Success = $false
-            Result = $null
-            Error = $_.Exception.Message
+            Result  = $null
+            Error   = $_.Exception.Message
         }
     }
 }
