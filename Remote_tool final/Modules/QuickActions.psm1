@@ -1,4 +1,4 @@
-﻿# QuickActions.psm1
+# QuickActions.psm1
 # Handles Quick Actions panel and functionality
 
 $script:QuickActionsPanel = $null
@@ -594,9 +594,4 @@ Export-ModuleMember -Function @(
     'Initialize-QuickActionsPanel',
     'Update-QuickActionButtons'
 )
-
-
-
-
-
 
