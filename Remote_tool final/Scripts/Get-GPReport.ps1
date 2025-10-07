@@ -6,7 +6,10 @@ param(
     [string]$ComputerName,
     
     [Parameter()]
-    [System.Management.Automation.PSCredential]$Credential
+    [System.Management.Automation.PSCredential]$Credential,
+    [Parameter()]
+    [ValidateSet('Computer','User','Both')]
+    [string]$Scope = 'Computer'
 )
 
 try {
@@ -24,10 +27,16 @@ try {
     
     # Generate the Group Policy report using gpresult
     $scriptBlock = {
-        param($ReportPath)
+        param($ReportPath, $ScopeValue)
         
         # Run gpresult to generate HTML report
-        $result = gpresult /h $ReportPath /f
+        $gpArgs = @('/h', $ReportPath, '/f')
+        switch ($ScopeValue) {
+            'Computer' { $gpArgs += '/scope'; $gpArgs += 'computer' }
+            'User'     { $gpArgs += '/scope'; $gpArgs += 'user' }
+            default    { }
+        }
+        $result = gpresult @gpArgs
         
         return @{
             Success = $LASTEXITCODE -eq 0
@@ -51,7 +60,7 @@ try {
         }
         
         # Generate report on remote computer
-        $result = Invoke-Command -Session $session -ScriptBlock $scriptBlock -ArgumentList $remoteTempPath
+        $result = Invoke-Command -Session $session -ScriptBlock $scriptBlock -ArgumentList $remoteTempPath, $Scope
         
         if ($result.Success) {
             # Copy report back to local machine
